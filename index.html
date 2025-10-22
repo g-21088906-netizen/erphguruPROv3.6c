@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>eRPH Guru Pro v3.6 (Cache Edition)</title>
+<style>
+:root{
+  --bg: #f6f9ff;
+  --card: #fff;
+  --muted: #667085;
+  --ink: #0b1b2b;
+  --accent: #2563eb;
+  --bd: #e6eef8;
+  --radius: 12px;
+  --shadow: 0 8px 22px rgba(10,45,90,.06);
+  --print-accent: var(--accent);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.header{
+  display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:linear-gradient(90deg,var(--accent),#1b4fc6);color:#fff;
+}
+.header .title{font-weight:700;font-size:1.05rem}
+.header .meta{font-size:0.9rem;opacity:0.95}
+.container{max-width:1100px;margin:20px auto;padding:18px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
+.navbar{display:flex;gap:8px;flex-wrap:wrap}
+.nav-btn{padding:10px 14px;border-radius:10px;border:2px solid transparent;background:#fff;color:var(--ink);cursor:pointer;font-weight:600}
+.nav-btn.active{background:linear-gradient(180deg,#fff,#f3f6ff);border-color:var(--bd);box-shadow:0 6px 18px rgba(10,45,90,.03)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.controls{display:flex;gap:8px;align-items:center}
+.small{font-size:.88rem;color:var(--muted)}
+.hint{color:var(--muted);font-size:.88rem}
+input[type="file"], select, textarea, input[type="text"], input[type="date"], input[type="time"]{
+  font:inherit;padding:8px;border-radius:8px;border:1px solid var(--bd);background:#fff;width:100%;
+}
+textarea{min-height:84px;resize:vertical}
+.btn{cursor:pointer;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:#fff}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.table-preview{max-height:300px;overflow:auto;border:1px solid var(--bd);border-radius:10px;padding:8px;background:#fbfdff}
+.preview-table{width:100%;border-collapse:collapse}
+.preview-table th,.preview-table td{border:1px solid #e8eef8;padding:6px;font-size:12px;text-align:left}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:920px){ .grid{grid-template-columns:repeat(2,1fr);} }
+@media (max-width:620px){ .grid{grid-template-columns:1fr;} .header{flex-direction:column;align-items:flex-start;gap:6px} }
+
+.record-card{border:1px solid var(--bd);border-radius:10px;padding:10px;margin-bottom:8px;background:#fff}
+.controls-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* toast */
+.toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 6px 18px rgba(2,6,23,.4);display:none;z-index:9999}
+.toast.show{display:block}
+
+/* printing: handled by generated HTML in new window, but keep inline override for embedded preview if needed */
+.rph-embed{border:1px solid #eee;border-radius:8px;padding:10px;background:#fff}
+.kv{font-weight:700;color:#111;margin-right:6px}
+
+/* small responsive tweaks */
+.footer-note{font-size:.85rem;color:var(--muted);margin-top:6px}
+
+/* focus accessibility */
+.nav-btn:focus, .btn:focus, button:focus { outline:3px solid rgba(37,99,235,0.12); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <div class="title">eRPH Guru Pro v3.6 (Cache Edition)</div>
+    <div class="small">Import DSKP • Borang RPH • Rekod — Semua tersimpan di peranti</div>
+  </div>
+  <div class="meta small">Versi stabil · Tiada akaun diperlukan · Simpanan tempatan</div>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="navbar" role="tablist" aria-label="Navigasi">
+      <button id="btnTabDSKP" class="nav-btn active" role="tab">📁 DSKP</button>
+      <button id="btnTabRPH" class="nav-btn" role="tab">📝 Borang RPH</button>
+      <button id="btnTabRecords" class="nav-btn" role="tab">📚 Rekod</button>
+    </div>
+    <div class="hint" style="margin-top:8px">Gunakan butang di atas untuk beralih antara modul. Semua data disimpan secara tempatan (localStorage).</div>
+  </div>
+
+  <!-- DSKP pane -->
+  <div id="paneDSKP" class="card" aria-hidden="false">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1">
+        <h3 style="margin:0 0 6px 0">Import DSKP (CSV)</h3>
+        <div class="small hint">Sokong CSV (UTF-8), BOM, koma / semikolon / tab, serta petikan berganda. Disyorkan kolum: <code>tahun, subjek, unit, tajuk, sk, sp, tema, kemahiran</code>.</div>
+      </div>
+      <div class="controls-right">
+        <input id="fileDSKP" type="file" accept=".csv" aria-label="Import DSKP CSV" />
+        <button id="btnPasteCSV" class="btn">Tampal CSV</button>
+        <button id="btnReloadCache" class="btn">🔄 Muat Semula Cache</button>
+        <button id="btnClearCache" class="btn">🗑 Padam Cache</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <div id="cacheIndicator" class="small">❌ Tiada DSKP disimpan</div>
+      <div class="small" id="dsSummary" style="margin-left:auto">—</div>
+      <div style="width:100%;margin-top:8px" class="table-preview" id="dskpPreview" aria-live="polite"></div>
+    </div>
+
+    <div class="footer-note">Pratonton dipendekkan (max-height 300px). Jika rekod terlalu panjang, gunakan butang "Lihat Asal" dalam menu konteks.</div>
+  </div>
+
+  <!-- RPH pane -->
+  <div id="paneRPH" class="card" style="display:none" aria-hidden="true">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div><h3 style="margin:0">Borang RPH</h3><div class="small hint">Isikan borang dan simpan. Data disimpan di peranti.</div></div>
+      <div class="controls-right">
+        <button id="btnSaveRPH" class="btn primary">💾 Simpan Rekod</button>
+        <button id="btnPreviewPrint" class="btn">🖨 Pratonton & Cetak</button>
+        <button id="btnLoadFromRecord" class="btn">⬇ Muat dari Rekod</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px" class="grid">
+      <label>Tarikh <input id="rphDate" type="date"></label>
+      <label>Kelas <input id="rphClass" type="text" placeholder="cth: 2 Safa"></label>
+      <label>Tahun <select id="rphYear"></select></label>
+
+      <label>Subjek <select id="rphSubject"></select></label>
+      <label>Unit <select id="rphUnit"></select></label>
+      <label>Tajuk <select id="rphTitle"></select></label>
+
+      <label>SK <select id="rphSK"></select></label>
+      <label>SP <select id="rphSP"></select></label>
+      <label>Jenis Pentaksiran <select id="rphAssess"><option>Formatif</option><option>Sumatif</option><option>Pemerhatian</option><option>Lisan</option><option>Bertulis</option></select></label>
+
+      <label>Masa Mula <input id="rphStart" type="time"></label>
+      <label>Masa Tamat <input id="rphEnd" type="time"></label>
+      <label>Tema Cetakan <select id="rphPrintTheme"><option value="bw">Hitam Putih</option><option value="blue">Biru</option><option value="green">Hijau</option><option value="red">Merah</option><option value="purple">Ungu</option></select></label>
+
+      <label style="grid-column:1/-1">Objektif PdPc <textarea id="rphObj"></textarea></label>
+      <label style="grid-column:1/-1">Aktiviti PdPc <textarea id="rphAct"></textarea></label>
+      <label style="grid-column:1/-1">BBM / Sumber <textarea id="rphBBM"></textarea></label>
+
+      <label style="grid-column:1/-1">Refleksi Guru <textarea id="rphRef"></textarea></label>
+      <label style="grid-column:1/-1">Pentaksiran (Kesimpulan) <textarea id="rphPent"></textarea></label>
+      <label style="grid-column:1/-1">Nilai Karakter <input id="rphValue" type="text" placeholder="cth: Disiplin, Tolong-menolong"></label>
+    </div>
+
+    <div style="margin-top:12px">
+      <div class="small">Pratonton ringkas (embedded)</div>
+      <div id="embeddedPreview" class="rph-embed" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- Records pane -->
+  <div id="paneRecords" class="card" style="display:none" aria-hidden="true">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div><h3 style="margin:0">Rekod RPH</h3><div class="small hint">Semak, muat ke borang, cetak atau padam rekod.</div></div>
+      <div class="controls-right">
+        <button id="btnExportAll" class="btn">📤 Eksport CSV</button>
+        <button id="btnBackupNow" class="btn">⤓ Backup Sekarang</button>
+        <button id="btnClearAll" class="btn">❌ Padam Semua</button>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="small">Carian Tarikh:
+        <select id="filterDate" style="min-width:180px"><option value="">(Semua Tarikh)</option></select>
+      </label>
+      <label class="small">Carian Subjek:
+        <select id="filterSubject" style="min-width:180px"><option value="">(Semua Subjek)</option></select>
+      </label>
+      <div class="small" id="recordsSummary" style="margin-left:auto">—</div>
+    </div>
+
+    <div id="recordsList" style="margin-top:10px"></div>
+    <div style="margin-top:8px" class="debug small" id="debugLog">— log —</div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite">—</div>
+
+<script>
+(function(){
+  // ======= Keys =======
+  const KEY_DSKP_CACHE = 'erph_v36_dskp_csv';
+  const KEY_DSKP_INDEX = 'erph_v36_dskp_index';
+  const KEY_RPH_RECORDS = 'erph_v36_rph_records';
+  const KEY_RPH_DRAFT = 'erph_v36_rph_draft';
+  const KEY_THEME = 'erph_v36_theme';
+
+  // ======= helpers =======
+  const $ = (id) => document.getElementById(id);
+  function toast(msg, t=2200){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), t); }
+  function log(s){ const el=$('debugLog'); if(!el) return; el.textContent = (new Date().toLocaleTimeString()) + ' ' + s + '\n' + el.textContent; console.log(s); }
+
+  // ======= CSV parsing (robust) =======
+  function stripBOM(s){ return String(s||'').replace(/^\uFEFF/, ''); }
+  function splitRow(line, delim){
+    const out=[]; let cur=''; let q=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch === '"'){
+        if(q && line[i+1] === '"'){ cur += '"'; i++; } else q = !q;
+      } else if(ch === delim && !q){ out.push(cur); cur=''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
+  function normalizeHeader(h){
+    h = String(h||'').trim().toLowerCase().replace(/\s+/g,' ');
+    const map = {'tahun':'tahun','taun':'tahun','year':'tahun','subjek':'subjek','subject':'subjek','unit':'unit','tajuk':'tajuk','title':'tajuk','sk':'sk','standard kandungan':'sk','sp':'sp','standard pembelajaran':'sp','tema':'tema','kemahiran':'kemahiran'};
+    return map[h] || h.replace(/[^a-z0-9]/g,'_');
+  }
+  function detectDelimiter(headLine){
+    const counts = [
+      {d:';', c:(headLine.match(/;/g)||[]).length},
+      {d:'\t', c:(headLine.match(/\t/g)||[]).length},
+      {d:',', c:(headLine.match(/,/g)||[]).length}
+    ].sort((a,b)=>b.c-a.c);
+    return counts[0].c>0 ? counts[0].d : ',';
+  }
+  function parseFlexibleCSV(text){
+    text = stripBOM(text||'').replace(/\r/g,'');
+    const linesAll = text.split('\n');
+    const lines = linesAll.filter(l=>l.trim().length>0);
+    if(!lines.length) return {rows:[], headers:[]};
+    const head = lines[0];
+    const delim = detectDelimiter(head);
+    const rawHeaders = splitRow(head, delim);
+    const headers = rawHeaders.map(normalizeHeader);
+    const rows = [];
+    for(let i=1;i<lines.length;i++){
+      const cells = splitRow(lines[i], delim);
+      // If too many cells, join extras into last column (handles stray delim inside quoted)
+      if(cells.length > headers.length){
+        const extra = cells.slice(headers.length-1).join(delim);
+        cells.splice(headers.length-1, cells.length-(headers.length-1), extra);
+      }
+      const obj = {};
+      for(let j=0;j<headers.length;j++) obj[headers[j]] = (cells[j] ?? '').trim();
+      rows.push(obj);
+    }
+    return {rows, headers, delim};
+  }
+
+  // ======= Build index for dropdown cascade =======
+  let DSKP_ROWS = []; // mapped rows
+  let INDEX = { byYear: {} };
+
+  function mapRowToDSKP(o){
+    return {
+      tahun: String(o.tahun || o.year || '').trim(),
+      subjek: (o.subjek || o.subject || '').trim(),
+      unit: (o.unit || '').trim(),
+      tajuk: (o.tajuk || o.title || '').trim(),
+      sk: (o.sk || '').trim(),
+      sp: (o.sp || '').trim(),
+      tema: (o.tema || '').trim(),
+      kemahiran: (o.kemahiran || '').trim(),
+      _raw: o
+    };
+  }
+
+  function buildIndexFromRows(rows){
+    INDEX = { byYear: {} };
+    rows.forEach(r=>{
+      const t = r.tahun, s = r.subjek, u = r.unit;
+      if(!t || !s) return;
+      INDEX.byYear[t] = INDEX.byYear[t] || { subjects: {} };
+      const Y = INDEX.byYear[t];
+      Y.subjects[s] = Y.subjects[s] || { units: [], titlesByUnit: {}, skByUnit: {}, spByUnit: {} };
+      const S = Y.subjects[s];
+      if(u && !S.units.includes(u)) S.units.push(u);
+      S.titlesByUnit[u] = S.titlesByUnit[u] || [];
+      S.skByUnit[u] = S.skByUnit[u] || [];
+      S.spByUnit[u] = S.spByUnit[u] || [];
+      if(r.tajuk && !S.titlesByUnit[u].includes(r.tajuk)) S.titlesByUnit[u].push(r.tajuk);
+      if(r.sk && !S.skByUnit[u].includes(r.sk)) S.skByUnit[u].push(r.sk);
+      if(r.sp && !S.spByUnit[u].includes(r.sp)) S.spByUnit[u].push(r.sp);
+    });
+    // sort arrays for nicer UX
+    Object.keys(INDEX.byYear).forEach(y=>{
+      const sm = INDEX.byYear[y].subjects;
+      Object.keys(sm).forEach(s=>{
+        sm[s].units.sort((a,b)=>a.localeCompare(b,'ms'));
+        Object.keys(sm[s].titlesByUnit).forEach(u=> sm[s].titlesByUnit[u].sort((a,b)=>a.localeCompare(b,'ms')));
+        Object.keys(sm[s].skByUnit).forEach(u=> sm[s].skByUnit[u].sort((a,b)=>a.localeCompare(b,'ms')));
+        Object.keys(sm[s].spByUnit).forEach(u=> sm[s].spByUnit[u].sort((a,b)=>a.localeCompare(b,'ms')));
+      });
+    });
+  }
+
+  // ======= UI helpers for DSKP cascade =======
+  function fillSelectById(id, arr, keepValue){
+    const sel = $(id);
+    const prev = sel.value;
+    sel.innerHTML = '';
+    (arr||[]).forEach(v=>{
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v; sel.appendChild(o);
+    });
+    if(arr && arr.length){
+      if(keepValue && arr.includes(prev)) sel.value = prev;
+      else sel.selectedIndex = 0;
+    }
+  }
+
+  function updateDSKPPreviewHTML(rows, maxRows=50){
+    const preview = $('dskpPreview');
+    if(!rows || !rows.length){ preview.innerHTML = '<small class="small">Tiada rekod untuk dipratonton.</small>'; return; }
+    const headers = Object.keys(rows[0]._raw || rows[0]).slice(0,12);
+    const cols = headers;
+    let html = '<table class="preview-table"><thead><tr>';
+    cols.forEach(c => html += `<th>${escapeHtml(c)}</th>`);
+    html += '</tr></thead><tbody>';
+    const count = Math.min(rows.length, maxRows);
+    for(let i=0;i<count;i++){
+      html += '<tr>';
+      cols.forEach(c => html += `<td>${escapeHtml(rows[i]._raw ? (rows[i]._raw[c]||'') : (rows[i][c]||''))}</td>`);
+      html += '</tr>';
+    }
+    if(rows.length > maxRows) html += `<tr><td colspan="${cols.length}">... (${rows.length-maxRows} lagi baris disembunyikan)</td></tr>`;
+    html += '</tbody></table>';
+    preview.innerHTML = html;
+  }
+
+  // ======= Handle import / cache functions =======
+  function handleCSVTextAndCache(text, label){
+    try{
+      const {rows, headers, delim} = parseFlexibleCSV(text);
+      if(!rows.length){ toast('Tiada baris dikesan dalam CSV'); return; }
+      const mapped = rows.map(mapRowToDSKP);
+      DSKP_ROWS = mapped;
+      buildIndexFromRows(mapped);
+      // save raw csv to localStorage
+      try{ localStorage.setItem(KEY_DSKP_CACHE, text); } catch(e){ console.warn('cannot save dskp cache', e); }
+      try{ localStorage.setItem(KEY_DSKP_INDEX, JSON.stringify(INDEX)); } catch(e){}
+      // UI updates
+      updateDSKPPreviewHTML(mapped);
+      updateCacheIndicator(true, mapped.length);
+      fillTopLevelDSKPControls();
+      toast('✅ DSKP dimuat & disimpan ke cache');
+      log(`Import ${label} — rows:${mapped.length} delim:${delim}`);
+    }catch(e){
+      console.error(e);
+      toast('Import CSV gagal — lihat console');
+      log('Import error: ' + e);
+    }
+  }
+
+  function loadDSKPFromCache(){
+    const raw = localStorage.getItem(KEY_DSKP_CACHE);
+    if(!raw) return false;
+    try{
+      const cachedIndex = JSON.parse(localStorage.getItem(KEY_DSKP_INDEX) || '{}');
+      const parsed = parseFlexibleCSV(raw);
+      const mapped = parsed.rows.map(mapRowToDSKP);
+      DSKP_ROWS = mapped;
+      buildIndexFromRows(mapped);
+      updateDSKPPreviewHTML(mapped);
+      updateCacheIndicator(true, mapped.length);
+      fillTopLevelDSKPControls();
+      log('DSKP loaded from cache');
+      return true;
+    }catch(e){
+      console.warn('failed to load dskp cache', e);
+      return false;
+    }
+  }
+
+  function clearDSKPCache(){
+    localStorage.removeItem(KEY_DSKP_CACHE);
+    localStorage.removeItem(KEY_DSKP_INDEX);
+    DSKP_ROWS = []; INDEX = { byYear: {} };
+    $('dskpPreview').innerHTML = '';
+    updateCacheIndicator(false, 0);
+    fillTopLevelDSKPControls();
+    toast('🗑 Cache DSKP dipadam');
+  }
+
+  function updateCacheIndicator(exists, count){
+    const el = $('cacheIndicator');
+    if(exists) el.textContent = `✅ DSKP disimpan dalam cache · rekod: ${count||DSKP_ROWS.length}`;
+    else el.textContent = '❌ Tiada DSKP disimpan';
+    $('dsSummary').textContent = exists ? `Tahun: ${Object.keys(INDEX.byYear).join(', ') || '—'}` : '—';
+  }
+
+  // fill top-level selects (years/subjects) for RPH form
+  function fillTopLevelDSKPControls(){
+    const years = Object.keys(INDEX.byYear).sort((a,b)=> (Number(a) && Number(b)) ? Number(a)-Number(b) : a.localeCompare(b,'ms'));
+    fillSelectById('rphYear', years);
+    // Trigger cascade to set subject/unit/title/sk/sp
+    onRphYearChange();
+  }
+
+  // cascade handlers
+  function onRphYearChange(){
+    const year = $('rphYear').value;
+    const Y = INDEX.byYear[year];
+    if(!Y){ fillSelectById('rphSubject', []); fillSelectById('rphUnit', []); fillSelectById('rphTitle', []); fillSelectById('rphSK', []); fillSelectById('rphSP', []); return; }
+    const subs = Object.keys(Y.subjects).sort((a,b)=>a.localeCompare(b,'ms'));
+    fillSelectById('rphSubject', subs);
+    onRphSubjectChange();
+  }
+  function onRphSubjectChange(){
+    const year = $('rphYear').value;
+    const subj = $('rphSubject').value;
+    const S = INDEX.byYear[year]?.subjects[subj];
+    if(!S){ fillSelectById('rphUnit', []); fillSelectById('rphTitle', []); fillSelectById('rphSK', []); fillSelectById('rphSP', []); return; }
+    fillSelectById('rphUnit', S.units || []);
+    onRphUnitChange();
+  }
+  function onRphUnitChange(){
+    const year = $('rphYear').value;
+    const subj = $('rphSubject').value;
+    const unit = $('rphUnit').value;
+    const S = INDEX.byYear[year]?.subjects[subj];
+    if(!S){ fillSelectById('rphTitle', []); fillSelectById('rphSK', []); fillSelectById('rphSP', []); return; }
+    fillSelectById('rphTitle', S.titlesByUnit[unit] || []);
+    fillSelectById('rphSK', S.skByUnit[unit] || []);
+    fillSelectById('rphSP', S.spByUnit[unit] || []);
+  }
+
+  // ======= RPH Records storage & UI =======
+  function loadRecords(){
+    try{
+      return JSON.parse(localStorage.getItem(KEY_RPH_RECORDS) || '[]');
+    }catch(e){
+      return [];
+    }
+  }
+  function saveRecords(arr){
+    try{
+      localStorage.setItem(KEY_RPH_RECORDS, JSON.stringify(arr));
+      return true;
+    }catch(e){
+      try{ sessionStorage.setItem(KEY_RPH_RECORDS, JSON.stringify(arr)); return true; }catch(e2){ window.__RPH_TMP = arr; return false; }
+    }
+  }
+  function addRecord(rec){
+    const arr = loadRecords();
+    arr.unshift(rec);
+    saveRecords(arr);
+    toast('💾 RPH disimpan');
+    renderRecordsList();
+    updateFilterOptions();
+    backupRecordsCSV();
+  }
+  function deleteRecordById(id){
+    let arr = loadRecords();
+    arr = arr.filter(r=> r.id !== id);
+    saveRecords(arr);
+    toast('❌ Rekod dipadam');
+    renderRecordsList();
+    updateFilterOptions();
+  }
+
+  function renderRecordsList(filterDate, filterSubject){
+    const container = $('recordsList');
+    const arr = loadRecords();
+    let filtered = arr;
+    if(filterDate) filtered = filtered.filter(r=> r.tarikh === filterDate);
+    if(filterSubject) filtered = filtered.filter(r=> r.subjek === filterSubject);
+    if(!filtered.length){ container.innerHTML = '<small class="small">Tiada rekod ditemui.</small>'; $('recordsSummary').textContent = `Jumlah rekod: ${arr.length}`; return; }
+    const html = filtered.map((r,i)=>{
+      return `<div class="record-card">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="flex:1">
+            <div style="font-weight:700">${escapeHtml(r.tarikh||'—')} — ${escapeHtml(r.subjek||'—')}</div>
+            <div class="small">${escapeHtml(r.unit||'')} — ${escapeHtml(r.tajuk||'')}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" data-id="${r.id}" data-action="load">⬇ Muat</button>
+            <button class="btn" data-id="${r.id}" data-action="print">🖨 Cetak</button>
+            <button class="btn" data-id="${r.id}" data-action="del">❌ Padam</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    container.innerHTML = html;
+    $('recordsSummary').textContent = `Jumlah rekod: ${arr.length} • Dipaparkan: ${filtered.length}`;
+    // delegate actions
+    container.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        const id = btn.getAttribute('data-id');
+        const action = btn.getAttribute('data-action');
+        if(action==='load'){ loadRecordToFormById(id); showTab('rph'); toast('Rekod dimuat ke borang'); }
+        if(action==='print'){ const rec = loadRecords().find(x=>x.id===id); if(rec) openPrintWindow(rec); }
+        if(action==='del'){ if(confirm('Padam rekod ini?')) deleteRecordById(id); }
+      });
+    });
+  }
+
+  function updateFilterOptions(){
+    const arr = loadRecords();
+    const dates = [...new Set(arr.map(r=>r.tarikh).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ms'));
+    const subs = [...new Set(arr.map(r=>r.subjek).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ms'));
+    const fd = $('filterDate'), fs = $('filterSubject');
+    const curDate = fd.value, curSub = fs.value;
+    fd.innerHTML = '<option value="">(Semua Tarikh)</option>'; dates.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; fd.appendChild(o); });
+    fs.innerHTML = '<option value="">(Semua Subjek)</option>'; subs.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; fs.appendChild(o); });
+    if(dates.includes(curDate)) fd.value = curDate;
+    if(subs.includes(curSub)) fs.value = curSub;
+  }
+
+  function backupRecordsCSV(){
+    try{
+      const arr = loadRecords();
+      if(!arr.length) return;
+      const headers = ['Tarikh','MasaMula','MasaTamat','NamaGuru','Sekolah','Kelas','Tahun','Subjek','Unit','Tajuk','SK','SP','Objektif','Aktiviti','BBM','Catatan','Refleksi','Pentaksiran','NilaiKarakter','SavedAt','ID'];
+      const rows = arr.map(r => headers.map(h=>{
+        const map = {'Tarikh':'tarikh','MasaMula':'masa_mula','MasaTamat':'masa_tamat','NamaGuru':'nama_guru','Sekolah':'sekolah','Kelas':'kelas','Tahun':'tahun','Subjek':'subjek','Unit':'unit','Tajuk':'tajuk','SK':'sk','SP':'sp','Objektif':'objektif','Aktiviti':'aktiviti','BBM':'bbm','Catatan':'catatan','Refleksi':'refleksi','Pentaksiran':'pentaksiran','NilaiKarakter':'nilai_karakter','SavedAt':'saved_at','ID':'id'}[h];
+        return `"${String(r[map]||'').replace(/"/g,'""')}"`;
+      }).join(','));
+      const csv = headers.join(',') + '\r\n' + rows.join('\r\n');
+      try{ localStorage.setItem(KEY_RPH_RECORDS + '_backup_csv', csv); localStorage.setItem(KEY_RPH_RECORDS + '_backup_ts', String(Date.now())); $('lastBackupTs') && ($('lastBackupTs').textContent = new Date().toLocaleString()); }catch(e){ window.__ERPH_BACKUP = csv; }
+      log('Backup CSV updated');
+    }catch(e){ console.warn(e); }
+  }
+
+  // ======= Build/Load RPH object from form =======
+  function buildRPHObjectFromForm(){
+    const prof = JSON.parse(localStorage.getItem('erph_profile')||'{}')||{};
+    return {
+      id: 'RPH-' + Date.now(),
+      tarikh: $('rphDate').value || '',
+      masa_mula: $('rphStart').value || '',
+      masa_tamat: $('rphEnd').value || '',
+      nama_guru: prof.name || prof.nama || '',
+      sekolah: prof.school || '',
+      kelas: $('rphClass').value || '',
+      tahun: $('rphYear').value || '',
+      subjek: $('rphSubject').value || '',
+      unit: $('rphUnit').value || '',
+      tajuk: $('rphTitle').value || '',
+      sk: $('rphSK').value || '',
+      sp: $('rphSP').value || '',
+      objektif: $('rphObj').value || '',
+      aktiviti: $('rphAct').value || '',
+      bbm: $('rphBBM').value || '',
+      catatan: '', // optional field reserved
+      refleksi: $('rphRef').value || '',
+      pentaksiran: $('rphPent').value || '',
+      nilai_karakter: $('rphValue').value || '',
+      pentaksiran_jenis: $('rphAssess').value || '',
+      print_theme: $('rphPrintTheme').value || 'blue',
+      saved_at: new Date().toISOString()
+    };
+  }
+
+  function saveDraftForm(){
+    try{ localStorage.setItem(KEY_RPH_DRAFT, JSON.stringify(collectFormState())); }catch(e){}
+  }
+  function collectFormState(){
+    return {
+      rphDate: $('rphDate').value,
+      rphClass: $('rphClass').value,
+      rphYear: $('rphYear').value,
+      rphSubject: $('rphSubject').value,
+      rphUnit: $('rphUnit').value,
+      rphTitle: $('rphTitle').value,
+      rphSK: $('rphSK').value,
+      rphSP: $('rphSP').value,
+      rphStart: $('rphStart').value,
+      rphEnd: $('rphEnd').value,
+      rphObj: $('rphObj').value,
+      rphAct: $('rphAct').value,
+      rphBBM: $('rphBBM').value,
+      rphRef: $('rphRef').value,
+      rphPent: $('rphPent').value,
+      rphValue: $('rphValue').value,
+      rphAssess: $('rphAssess').value,
+      rphPrintTheme: $('rphPrintTheme').value
+    };
+  }
+  function restoreDraftToForm(){
+    try{
+      const d = JSON.parse(localStorage.getItem(KEY_RPH_DRAFT) || '{}');
+      if(!d || Object.keys(d).length===0) return;
+      $('rphDate').value = d.rphDate || '';
+      $('rphClass').value = d.rphClass || '';
+      $('rphYear').value = d.rphYear || '';
+      $('rphSubject').value = d.rphSubject || '';
+      $('rphUnit').value = d.rphUnit || '';
+      $('rphTitle').value = d.rphTitle || '';
+      $('rphSK').value = d.rphSK || '';
+      $('rphSP').value = d.rphSP || '';
+      $('rphStart').value = d.rphStart || '';
+      $('rphEnd').value = d.rphEnd || '';
+      $('rphObj').value = d.rphObj || '';
+      $('rphAct').value = d.rphAct || '';
+      $('rphBBM').value = d.rphBBM || '';
+      $('rphRef').value = d.rphRef || '';
+      $('rphPent').value = d.rphPent || '';
+      $('rphValue').value = d.rphValue || '';
+      $('rphAssess').value = d.rphAssess || '';
+      $('rphPrintTheme').value = d.rphPrintTheme || 'blue';
+      renderEmbeddedPreview();
+    }catch(e){}
+  }
+
+  function loadRecordToFormById(id){
+    const arr = loadRecords();
+    const rec = arr.find(r=> r.id === id);
+    if(!rec) return;
+    $('rphDate').value = rec.tarikh || '';
+    $('rphStart').value = rec.masa_mula || '';
+    $('rphEnd').value = rec.masa_tamat || '';
+    $('rphClass').value = rec.kelas || '';
+    $('rphYear').value = rec.tahun || '';
+    setTimeout(()=>{ // cascade
+      $('rphSubject').value = rec.subjek || '';
+      onRphSubjectChange();
+      setTimeout(()=>{
+        $('rphUnit').value = rec.unit || '';
+        onRphUnitChange();
+        setTimeout(()=>{ $('rphTitle').value = rec.tajuk || ''; $('rphSK').value = rec.sk || ''; $('rphSP').value = rec.sp || ''; }, 80);
+      }, 80);
+    }, 80);
+    $('rphObj').value = rec.objektif || '';
+    $('rphAct').value = rec.aktiviti || '';
+    $('rphBBM').value = rec.bbm || '';
+    $('rphRef').value = rec.refleksi || '';
+    $('rphPent').value = rec.pentaksiran || '';
+    $('rphValue').value = rec.nilai_karakter || '';
+    $('rphAssess').value = rec.pentaksiran_jenis || '';
+    $('rphPrintTheme').value = rec.print_theme || 'blue';
+    saveDraftForm();
+    renderEmbeddedPreview();
+  }
+
+  // ======= Print / Preview (open new window) =======
+  function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function nl2br(s){ return escapeHtml(s).replace(/\r\n|\r|\n/g, '<br>'); }
+
+  function buildPrintHTML(rec, theme){
+    const accent = theme === 'green' ? '#059669' : theme === 'red' ? '#c62828' : theme === 'purple' ? '#6a1b9a' : theme === 'bw' ? '#000' : '#2563eb';
+    const printCss = `
+      @page{size:A4;margin:14mm}
+      body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:0}
+      .wrap{padding:12mm}
+      h1{font-size:18px;margin:0 0 6px 0}
+      .meta{font-size:12px;color:#444;margin-bottom:8px}
+      .accent{height:6px;background:${accent};border-radius:4px;margin-bottom:10px}
+      .grid{display:grid;grid-template-columns:140px 1fr;row-gap:6px;column-gap:12px;font-size:13px}
+      .section{margin-top:10px}
+      .box{border:1px solid #ddd;padding:8px;border-radius:6px;background:#fff}
+      .sig{margin-top:18px;display:flex;gap:20px;justify-content:space-between}
+      .sig div{width:45%;text-align:left;border-top:1px solid #ddd;padding-top:8px}
+      .footer{font-size:11px;color:#666;margin-top:10px}
+    `;
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Pratonton Cetak RPH</title><style>${printCss}</style></head><body>
+      <div class="wrap">
+        <h1>RANCANGAN PELAKSANAAN HARIAN (RPH)</h1>
+        <div class="meta">${escapeHtml(rec.sekolah || '')} ${rec.nama_guru ? '• ' + escapeHtml(rec.nama_guru) : ''} • ${new Date().toLocaleDateString('ms-MY')}</div>
+        <div class="accent"></div>
+        <div class="grid">
+          <div><strong>Tarikh</strong></div><div>${escapeHtml(rec.tarikh || '—')}</div>
+          <div><strong>Kelas</strong></div><div>${escapeHtml(rec.kelas || '—')}</div>
+          <div><strong>Masa</strong></div><div>${escapeHtml((rec.masa_mula||'') + (rec.masa_mula && rec.masa_tamat ? ' — ' : '') + (rec.masa_tamat||''))}</div>
+          <div><strong>Subjek / Tahun</strong></div><div>${escapeHtml(rec.subjek || '—')} (Tahun ${escapeHtml(rec.tahun || '—')})</div>
+          <div><strong>Unit / Tajuk</strong></div><div>${escapeHtml(rec.unit || '—')} — ${escapeHtml(rec.tajuk || '—')}</div>
+          <div><strong>SK</strong></div><div>${escapeHtml(rec.sk || '—')}</div>
+          <div><strong>SP</strong></div><div>${escapeHtml(rec.sp || '—')}</div>
+        </div>
+        <div class="section"><strong>Objektif PdPc</strong><div class="box">${nl2br(rec.objektif || '—')}</div></div>
+        <div class="section"><strong>Aktiviti PdPc</strong><div class="box">${nl2br(rec.aktiviti || '—')}</div></div>
+        <div class="section"><strong>BBM / Sumber</strong><div class="box">${nl2br(rec.bbm || '—')}</div></div>
+        <div class="section"><strong>Refleksi Guru</strong><div class="box">${nl2br(rec.refleksi || '—')}</div></div>
+        <div class="section"><strong>Pentaksiran</strong><div class="box">${nl2br(rec.pentaksiran || '—')}</div></div>
+        <div class="section"><strong>Nilai Karakter</strong><div class="box">${escapeHtml(rec.nilai_karakter || '—')}</div></div>
+        <div class="sig"><div>Guru: ________________________</div><div>Disemak / Disahkan: ________________________</div></div>
+        <div class="footer">Dijana oleh eRPH Guru Pro v3.6 • Dicetak pada ${new Date().toLocaleString('ms-MY')}</div>
+      </div></body></html>`;
+    return html;
+  }
+
+  function openPrintWindow(rec){
+    const theme = rec.print_theme || $('rphPrintTheme').value || 'blue';
+    const html = buildPrintHTML(rec, theme);
+    const w = window.open('', '_blank', 'toolbar=0,location=0,menubar=0');
+    if(!w){ toast('Popup disekat — benarkan tetingkap baru.'); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){ console.error(e); } }, 600);
+  }
+
+  // open print for current form
+  function openPrintForCurrentForm(){
+    const rec = buildRPHObjectFromForm();
+    if(!rec.tarikh || !rec.subjek){ toast('Sila isi tarikh dan subjek terlebih dahulu'); return; }
+    // add name & school from profile if any
+    const prof = JSON.parse(localStorage.getItem('erph_profile') || '{}') || {};
+    rec.nama_guru = prof.name || rec.nama_guru || '';
+    rec.sekolah = prof.school || rec.sekolah || '';
+    openPrintWindow(rec);
+  }
+
+  // ======= UI boot & bindings =======
+  function showTab(key){
+    ['paneDSKP','paneRPH','paneRecords'].forEach(id=> $(id).style.display='none');
+    ['btnTabDSKP','btnTabRPH','btnTabRecords'].forEach(id=> $(id).classList.remove('active'));
+    if(key==='dskp'){ $('paneDSKP').style.display='block'; $('btnTabDSKP').classList.add('active'); }
+    if(key==='rph'){ $('paneRPH').style.display='block'; $('btnTabRPH').classList.add('active'); }
+    if(key==='records'){ $('paneRecords').style.display='block'; $('btnTabRecords').classList.add('active'); renderRecordsList(); updateFilterOptions(); }
+  }
+
+  // initial bindings
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // tabs
+    $('btnTabDSKP').addEventListener('click', ()=> showTab('dskp'));
+    $('btnTabRPH').addEventListener('click', ()=> showTab('rph'));
+    $('btnTabRecords').addEventListener('click', ()=> showTab('records'));
+
+    // file import
+    $('fileDSKP').addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=> handleCSVTextAndCache(String(reader.result||''), f.name || 'file');
+      reader.readAsText(f, 'utf-8');
+    });
+    $('btnPasteCSV').addEventListener('click', ()=>{
+      const t = prompt('Tampal CSV di sini (Cancel untuk batal):');
+      if(t) handleCSVTextAndCache(String(t), 'paste');
+    });
+    $('btnReloadCache').addEventListener('click', ()=>{
+      const ok = loadDSKPFromCache();
+      if(ok) toast('✅ DSKP dimuat semula dari cache');
+      else toast('Tiada cache DSKP — sila import fail CSV');
+    });
+    $('btnClearCache').addEventListener('click', ()=> { if(confirm('Padam cache DSKP?')) clearDSKPCache(); });
+
+    // cascade binds
+    $('rphYear').addEventListener('change', ()=> { onRphYearChange(); saveDraftForm(); renderEmbeddedPreview(); });
+    $('rphSubject').addEventListener('change', ()=> { onRphSubjectChange(); saveDraftForm(); renderEmbeddedPreview(); });
+    $('rphUnit').addEventListener('change', ()=> { onRphUnitChange(); saveDraftForm(); renderEmbeddedPreview(); });
+    ['rphTitle','rphSK','rphSP','rphAssess','rphStart','rphEnd','rphClass','rphObj','rphAct','rphBBM','rphRef','rphPent','rphValue','rphPrintTheme'].forEach(id=>{
+      $(id).addEventListener('change', ()=> { saveDraftForm(); renderEmbeddedPreview(); });
+      $(id).addEventListener('input', ()=> { saveDraftForm(); renderEmbeddedPreview(); });
+    });
+
+    // RPH actions
+    $('btnSaveRPH').addEventListener('click', ()=>{
+      const rec = buildRPHObjectFromForm();
+      if(!rec.tarikh || !rec.subjek){ toast('Sila isi tarikh & subjek'); return; }
+      // ask for teacher name if not set in profile
+      let prof = JSON.parse(localStorage.getItem('erph_profile')||'{}')||{};
+      if(!prof.name){
+        const nm = prompt('Nama guru untuk rekod (contoh: Cikgu Aisyah):');
+        if(nm){ prof.name = nm; localStorage.setItem('erph_profile', JSON.stringify(prof)); rec.nama_guru = nm; }
+      }
+      rec.nama_guru = prof.name || rec.nama_guru || '';
+      rec.sekolah = prof.school || rec.sekolah || '';
+      addRecord(rec);
+    });
+    $('btnPreviewPrint').addEventListener('click', ()=> openPrintForCurrentForm());
+    $('btnLoadFromRecord').addEventListener('click', ()=> { showTab('records'); toast('Pilih rekod dan tekan "Muat"'); });
+
+    // Records actions
+    $('btnExportAll').addEventListener('click', exportAllRecordsCSV);
+    $('btnBackupNow').addEventListener('click', ()=> { backupRecordsCSV(); toast('Backup CSV dikemaskini'); });
+    $('btnClearAll').addEventListener('click', ()=> { if(confirm('Padam semua rekod RPH?')){ localStorage.removeItem(KEY_RPH_RECORDS); renderRecordsList(); updateFilterOptions(); toast('Semua rekod dipadam'); } });
+
+    $('filterDate').addEventListener('change', ()=> renderRecordsList($('filterDate').value, $('filterSubject').value));
+    $('filterSubject').addEventListener('change', ()=> renderRecordsList($('filterDate').value, $('filterSubject').value));
+
+    // try load cached DSKP
+    const loaded = loadDSKPFromCache();
+    if(!loaded) updateCacheIndicator(false, 0);
+    else toast('✅ DSKP dimuat dari cache');
+
+    // restore draft
+    restoreDraftToForm();
+
+    // set default tab
+    if(Object.keys(INDEX.byYear||{}).length) showTab('rph'); else showTab('dskp');
+
+    // render records list
+    renderRecordsList();
+    updateFilterOptions();
+  });
+
+  // export all records as CSV
+  function exportAllRecordsCSV(){
+    const arr = loadRecords();
+    if(!arr.length){ toast('Tiada rekod untuk dieksport'); return; }
+    const headers = ['Tarikh','MasaMula','MasaTamat','NamaGuru','Sekolah','Kelas','Tahun','Subjek','Unit','Tajuk','SK','SP','Objektif','Aktiviti','BBM','Refleksi','Pentaksiran','NilaiKarakter','SavedAt','ID'];
+    const rows = arr.map(r => headers.map(h=>{
+      const map = {'Tarikh':'tarikh','MasaMula':'masa_mula','MasaTamat':'masa_tamat','NamaGuru':'nama_guru','Sekolah':'sekolah','Kelas':'kelas','Tahun':'tahun','Subjek':'subjek','Unit':'unit','Tajuk':'tajuk','SK':'sk','SP':'sp','Objektif':'objektif','Aktiviti':'aktiviti','BBM':'bbm','Refleksi':'refleksi','Pentaksiran':'pentaksiran','NilaiKarakter':'nilai_karakter','SavedAt':'saved_at','ID':'id'}[h];
+      const v = r[map] ?? '';
+      return `"${String(v).replace(/"/g,'""')}"`;
+    }).join(','));
+    const csv = headers.join(',') + '\r\n' + rows.join('\r\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'erph_records_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast('CSV dieksport');
+  }
+
+  // render embedded preview for current form
+  function renderEmbeddedPreview(){
+    const rec = buildRPHObjectFromForm();
+    const preview = $('embeddedPreview');
+    preview.innerHTML = `<div><span class="kv">Tarikh:</span>${escapeHtml(rec.tarikh||'—')}</div>
+      <div><span class="kv">Subjek:</span>${escapeHtml(rec.subjek||'—')} • <span class="kv">Tahun:</span>${escapeHtml(rec.tahun||'—')}</div>
+      <div style="margin-top:6px"><strong>Objektif:</strong><div>${escapeHtml(rec.objektif||'—')}</div></div>
+      <div style="margin-top:6px"><strong>Aktiviti:</strong><div>${escapeHtml(rec.aktiviti||'—')}</div></div>`;
+  }
+
+  // utility
+  function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // maintain auto-save draft periodically (and on input)
+  setInterval(()=>{ saveDraftForm(); }, 3000);
+
+  // expose some functions globally for console debugging (optional)
+  window.__eRPH = {
+    parseFlexibleCSV, handleCSVTextAndCache, loadDSKPFromCache, clearDSKPCache, buildPrintHTML, openPrintWindow
+  };
+
+})();
+</script>
+</body>
+</html>
